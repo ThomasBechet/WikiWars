@@ -1,10 +1,15 @@
 from connection_resolver import ConnectionResolver
+from http_resolver import HttpResolver
 from game_factory import GameFactory
 
-def new_game(gid, game):
-    print('Starting', gid, 'with', str(len(game.players)), 'players')
-    pass
+if __name__ == '__main__':
+    def new_game(gid, game):
+        print('Starting', gid, 'with', str(len(game.players)), 'players')
+        pass
 
-gf = GameFactory()
-sc = ConnectionResolver(gf, new_game)
-sc.run()
+    http_resolver       = HttpResolver()
+    game_factorty       = GameFactory()
+    connection_resolver = ConnectionResolver(game_factorty, new_game)
+    http_resolver       = HttpResolver()
+    http_resolver.run()
+    #connection_resolver.run()
