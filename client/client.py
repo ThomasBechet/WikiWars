@@ -31,5 +31,5 @@ if __name__ == "__main__":
     print('Launching game...')
     webbrowser.open('http://' + SERVER_ADDR + ':' + str(SERVER_HTTP_PORT) + '/authentification?gid=' + gid + '&uid=' + uid, new=2)
 
-    # Terminate communication
+    # Terminate connection communication
     s.close()

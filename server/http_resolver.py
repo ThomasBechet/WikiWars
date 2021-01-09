@@ -4,14 +4,19 @@ import mimetypes
 import pprint
 import requests
 import socketserver
-from urllib.parse import parse_qs, quote_plus, unquote_plus, urlparse
+from urllib.parse import parse_qs
+from urllib.parse import urlparse
+from urllib.parse import quote_plus
+from urllib.parse import unquote_plus
+from functools import partial
 
 WIKI_FR_URL = 'https://fr.wikipedia.org'
 
 class Handler(http.server.BaseHTTPRequestHandler):
-    def __init__(self, *args):
+    def __init__(self, game_manager, *args, **kwargs):
         self._links = self._nested_dict(3, str)
         self._resources = {}
+        self._game_manager = game_manager
         resources = ['/styles/load_002.css', '/styles/load.css']
         for resource in resources:
             f = open('server' + resource, 'rb')
@@ -91,17 +96,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
             gid = params['gid'][0]
             uid = params['uid'][0]
 
+            # Create cookie
             cookie = http.cookies.SimpleCookie()
             cookie['gid'] = gid
             cookie['uid'] = uid
- 
-            print(gid, uid)
+
+            # Get start page
+            start_page = self._game_manager.get_start_page_from_game(gid)
 
             # Initialize the default link to start page
             self._links[gid][uid]['0'] = 'France'
 
+            # Send response
             self.send_response(301)
-            self.send_header('Location', '/wiki/0')
+            self.send_header('Location', '/wiki/0') # Redirect to first page
             for v in cookie.values():
                 self.send_header('Set-Cookie', v.OutputString())
             self.end_headers()
@@ -127,6 +135,7 @@ class HttpResolver():
         self._game_manager = game_manager
 
     def run(self):
-        with socketserver.TCPServer(('', 5000), Handler) as httpd:
-            httpd._gm = self._game_manager
+        handler = partial(Handler, self._game_manager)
+        with socketserver.TCPServer(('', 5000), handler) as httpd:
+            httpd.gm = self._game_manager
             httpd.serve_forever()
