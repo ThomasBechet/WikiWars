@@ -1,7 +1,6 @@
 from collections import defaultdict
 import http.server
 import mimetypes
-import pprint
 import requests
 import socketserver
 from urllib.parse import parse_qs
@@ -13,14 +12,11 @@ from functools import partial
 WIKI_FR_URL = 'https://fr.wikipedia.org'
 
 class Handler(http.server.BaseHTTPRequestHandler):
-    def __init__(self, game_manager, *args, **kwargs):
-        self._links = self._nested_dict(3, str)
+    def __init__(self, game_manager, links, resources, *args, **kwargs):
         self._resources = {}
         self._game_manager = game_manager
-        resources = ['/styles/load_002.css', '/styles/load.css']
-        for resource in resources:
-            f = open('server' + resource, 'rb')
-            self._resources[resource] = f.read()
+        self._links = links
+        self._resources = resources
 
         http.server.BaseHTTPRequestHandler.__init__(self, *args)
 
@@ -29,61 +25,74 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_header('Content-type', mimetype)
         self.end_headers()
 
+    def _setup_page_and_links(self, wikipedia_body, wikipedia_links, gid, uid, status):
+        # OK header
+        self._setup_header(200, 'text/html; charset=utf-8')
+
+        # Unquote HTML body (remove %xxx characters)
+        body = unquote_plus(wikipedia_body, encoding='utf-8')
+
+        # Remove all current uid links reference
+        self._links[gid][uid].clear()
+
+        # Replace HTML body href
+        for i, link in enumerate(wikipedia_links):
+            title = link['*'].replace(' ', '_')
+            body = body.replace('href="/wiki/{}"'.format(title), 'href="/wiki/{}?gid={}&uid={}"'.format(str(i), gid, uid))
+            self._links[gid][uid][str(i)] = title
+
+        content = '''
+        <head>
+            <link rel="stylesheet" type="text/css" href="/styles/load.css"/>
+            <link rel="stylesheet" type="text/css" href="/styles/load_002.css"/>
+        </head>
+        <body>
+            <h1>Status : {}</h1>
+            <h1>Username : {}</h1>
+            <h1>Page : {}</h1>
+            <h1>Target page : {}</h1>
+            <h1>Move count : {}</h1>
+            <div style="margin: 2%;">
+            {}
+            </div>
+        </body>
+        '''.format(status.code.name, status.username, status.page, status.target_page, status.move_count, body).encode('utf-8')
+        
+        self.wfile.write(content)
+
+    def log_message(self, format, *args):
+        return
+
     def do_GET(self):
         url = urlparse(self.path)
         mimetype, _ = mimetypes.guess_type(url.path)
                 
-        
         # Page requested
         if url.path.startswith('/wiki'):
-            # Get user's cookies
-            cookies = http.cookies.SimpleCookie(self.headers.get('Cookie'))
-            print(cookies)
-
-            # Get cookies informations
-            gid = cookies['gid'].value
-            uid = cookies['uid'].value
-            print('GID: {}, UID: {}'.format(gid, uid))
+            # Get gid and uid
+            params = parse_qs(url.query)
+            gid = params['gid'][0]
+            uid = params['uid'][0]
             
+            # Get link code and get real page
             link_code = url.path.split('/', 2)[2]
-            page_name = self._links[gid][uid][link_code]
-            print('Links: {}'.format(self._links[gid][uid]))
-            print('Page name: {}'.format(page_name))
+            page = self._links[gid][uid][link_code]
 
-
-            r = requests.get('{}/w/api.php?action=parse&format=json&page={}&prop=pageimages|text|headhtml|images|links'.format(WIKI_FR_URL, page_name))
-
-            self._setup_header(r.status_code, 'text/html; charset=utf-8')
+            # Recover page and links from wikipedia API
+            r = requests.get('{}/w/api.php?action=parse&format=json&page={}&prop=text|links'.format(WIKI_FR_URL, page))
             
+            # Successfuly retrieve page
             if r.status_code == 200:
-                # Get HTML body
-                body = r.json()['parse']['text']['*']
 
-                # Unquote HTML body (remove %xxx characters)
-                body = unquote_plus(body, encoding='utf-8')
+                # Move player
+                status = self._game_manager.move_player_and_get_status(gid, uid, page)
 
-                # Remove all current uid links reference
-                self._links[gid][uid].clear()
-
-                # Replace HTML body href
-                cpt = 0
-                for link in r.json()['parse']['links']:
-                    title = link['*'].replace(' ', '_')
-                    body = body.replace('href="/wiki/{}"'.format(title), 'href="/wiki/{}"'.format(str(cpt)))
-                    self._links[gid][uid][str(cpt)] = title
-                    cpt += 1
-
-                content = '''
-                <head>
-                    <link rel="stylesheet" type="text/css" href="/styles/load.css"/>
-                    <link rel="stylesheet" type="text/css" href="/styles/load_002.css"/>
-                </head>
-                <body style="margin: 5%;">
-                    {}
-                </body>
-                '''.format(body).encode('utf-8')
-                
-                self.wfile.write(content)
+                # Render page
+                self._setup_page_and_links(r.json()['parse']['text']['*'], r.json()['parse']['links'], gid, uid, status)
+            
+            # Failed to retrieve pas
+            else:
+                pass
 
         # Local server resource requested
         elif url.path in self._resources.keys():
@@ -96,22 +105,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
             gid = params['gid'][0]
             uid = params['uid'][0]
 
-            # Create cookie
-            cookie = http.cookies.SimpleCookie()
-            cookie['gid'] = gid
-            cookie['uid'] = uid
-
             # Get start page
             start_page = self._game_manager.get_start_page_from_game(gid)
 
             # Initialize the default link to start page
-            self._links[gid][uid]['0'] = 'France'
+            self._links[gid][uid]['0'] = "France"
 
             # Send response
             self.send_response(301)
-            self.send_header('Location', '/wiki/0') # Redirect to first page
-            for v in cookie.values():
-                self.send_header('Set-Cookie', v.OutputString())
+            self.send_header('Location', '/wiki/{}?gid={}&uid={}'.format(0, gid, uid)) # Redirect to first page
             self.end_headers()
 
         # Other resources requested (probably wikipedia)
@@ -125,17 +127,21 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if n == 1:
             return defaultdict(type)
         else:
-            return defaultdict(lambda: self._nested_dict(n-1, type))
-
-         
-
+            return defaultdict(lambda: self._nested_dict(n - 1, type))
 
 class HttpResolver():
     def __init__(self, game_manager):
         self._game_manager = game_manager
+        self._links = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
+        self._resources = {}
+
+        resources = ['/styles/load_002.css', '/styles/load.css']
+        for resource in resources:
+            f = open('server' + resource, 'rb')
+            self._resources[resource] = f.read()
 
     def run(self):
-        handler = partial(Handler, self._game_manager)
+        handler = partial(Handler, self._game_manager, self._links, self._resources)
         with socketserver.TCPServer(('', 5000), handler) as httpd:
             httpd.gm = self._game_manager
             httpd.serve_forever()

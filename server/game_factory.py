@@ -32,8 +32,12 @@ class GameFactory:
             wg = Game(info['player_count'])
             wg.players[uid] = player
 
+            # If single player game
+            if wg.player_count == 1:
+                return uid, gid, wg
             # Save new waiting game
-            self._waiting_games[gid] = wg
+            else:
+                self._waiting_games[gid] = wg
 
         return uid, None, None
         

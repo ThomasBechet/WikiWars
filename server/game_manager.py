@@ -6,7 +6,7 @@ class GameManager():
 
     def add_game(self, gid, game):
         self._games[gid] = game
-        self._games[gid].start('France', 'Espagne')
+        self._games[gid].start('France', 'Allemand')
 
     def get_start_page_from_game(self, gid):
         return self._games[gid].start_page

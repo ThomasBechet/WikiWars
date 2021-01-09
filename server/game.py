@@ -28,7 +28,7 @@ class Game:
         # Update player page
         try:
             # Only if the game still running
-            if not self._winner:
+            if not self.winner:
                 self.players[uid].page = page
                 self.players[uid].move_count += 1
 
@@ -49,7 +49,7 @@ class Game:
         status.page        = self.players[uid].page
 
         # Check if the game is finished
-        if self._winner:
+        if self.winner:
             # Detect if this player won or lost the game
             status.code = PlayerStatusCode.GAME_WON if self.winner == uid else PlayerStatusCode.GAME_LOST 
             
