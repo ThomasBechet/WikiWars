@@ -8,10 +8,11 @@ SERVER_PORT = 12345
 MAX_BUFFER  = 512
 
 class ConnectionResolver:
-    def __init__(self, gf, callback):
+    def __init__(self, gf, gm):
         self._gf = gf
-        self._callback = callback
+        self._gm = gm
         self._sockets = {}
+        self._continue = True # Thread termination purpose
 
     def _start_game(self, gid, game):
         for uid in game.players.keys():
@@ -28,7 +29,10 @@ class ConnectionResolver:
             del self._sockets[uid]
 
         # Start the game
-        self._callback(gid, game)
+        self._gm.add_game(gid, game)
+
+    def stop(self):
+        self._continue = False
 
     def run(self):
         # Create server socket
@@ -37,7 +41,7 @@ class ConnectionResolver:
         s.listen(1)
 
         # Routine
-        while True:
+        while self._continue:
             ready, _, _ = select.select([s], [], [], 1)
             if ready:
                 # Get socket

@@ -25,7 +25,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         url = urlparse(self.path)
-        params = parse_qs(url.query)
         mimetype, _ = mimetypes.guess_type(url.path)
         
         # Page requested
@@ -57,7 +56,22 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
         # Authentification requested
         elif url.path == '/authentification':
-            pass
+            params = parse_qs(url.query)
+            gid = params['gid'][0]
+            uid = params['uid'][0]
+
+            cookie = http.cookies.SimpleCookie()
+            cookie['gid'] = gid
+            cookie['uid'] = uid
+
+            print(gid, uid)
+            # 
+
+            self.send_response(301)
+            self.send_header('Location', '/wiki/France')
+            for v in cookie.values():
+                self.send_header('Set-Cookie', v.OutputString())
+            self.end_headers()
 
         # Other resources requested (probably wikipedia)
         else:
@@ -67,9 +81,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.wfile.write(bytes(r.content))
 
 class HttpResolver():
-    def __init__(self):
-        pass
+    def __init__(self, game_manager):
+        self._game_manager = game_manager
 
     def run(self):
         with socketserver.TCPServer(('', 5000), Handler) as httpd:
+            httpd._gm = self._game_manager
             httpd.serve_forever()

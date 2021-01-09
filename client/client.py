@@ -12,8 +12,8 @@ if __name__ == "__main__":
     s.connect((SERVER_ADDR, SERVER_CONNECTION_PORT))
 
     # Get user information
-    username = input('Enter your username:')
-    player_count = int(input('Player count:'))
+    username = input('Enter your username: ')
+    player_count = int(input('Player count: '))
     
     # Ask for a party
     information = {}
@@ -22,12 +22,14 @@ if __name__ == "__main__":
     s.send(json.dumps(information).encode())
 
     # Wait for identifiers
+    print('Waiting for players...')
     identifiers = json.loads(s.recv(512).decode())
     uid = str(identifiers['uid'])
     gid = str(identifiers['gid'])
 
     # Open authentication page
-    webbrowser.open('http://' + SERVER_ADDR + ':' + str(SERVER_HTTP_PORT) + '/authentication?gid=' + gid + '&uid=' + uid, new=2)
+    print('Launching game...')
+    webbrowser.open('http://' + SERVER_ADDR + ':' + str(SERVER_HTTP_PORT) + '/authentification?gid=' + gid + '&uid=' + uid, new=2)
 
     # Terminate communication
     s.close()
