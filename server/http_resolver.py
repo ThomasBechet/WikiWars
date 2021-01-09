@@ -3,8 +3,7 @@ import mimetypes
 import pprint
 import requests
 import socketserver
-from urllib.parse import parse_qs
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, quote_plus, unquote_plus, urlparse
 
 WIKI_FR_URL = 'https://fr.wikipedia.org'
 
@@ -30,12 +29,23 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # Page requested
         if url.path.startswith('/wiki'):
             page = url.path.split('/', 2)[2]
-            r = requests.get('{}/w/api.php?action=parse&format=json&page={}&prop=pageimages|text|headhtml|images'.format(WIKI_FR_URL, page))
+            r = requests.get('{}/w/api.php?action=parse&format=json&page={}&prop=pageimages|text|headhtml|images|links'.format(WIKI_FR_URL, page))
 
             self._setup_header(r.status_code, 'text/html; charset=utf-8')
             
             if r.status_code == 200:
+                #Get HTML body
                 body = r.json()['parse']['text']['*']
+
+                #Unquote HTML body (remove %xxx characters)
+                body = unquote_plus(body, encoding='utf-8')
+
+                #Replace HTML body href
+                cpt = 0
+                for link in r.json()['parse']['links']:
+                    title = link['*'].replace(' ', '_')
+                    body = body.replace('href="/wiki/{}"'.format(title), 'href="/wiki/{}"'.format(str(cpt)))    
+                    cpt = cpt +1            
 
                 content = '''
                 <head>
@@ -46,7 +56,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     {}
                 </body>
                 '''.format(body).encode('utf-8')
-
+                
                 self.wfile.write(content)
 
         # Local server resource requested
