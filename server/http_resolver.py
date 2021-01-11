@@ -43,20 +43,34 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
         content = '''
         <head>
+            <title>WikiWars:{}</title>
             <link rel="stylesheet" type="text/css" href="/styles/load.css"/>
             <link rel="stylesheet" type="text/css" href="/styles/load_002.css"/>
         </head>
         <body>
-            <h1>Status : {}</h1>
-            <h1>Username : {}</h1>
-            <h1>Page : {}</h1>
-            <h1>Target page : {}</h1>
-            <h1>Move count : {}</h1>
+            <div id="container" style="display: flex; justify-content: center; margin-top: 2%; text-decoration: none">
+                <table>
+                    <thead>
+                        <tr>
+                            <th colspan="5"><h1>Page : {}</h1></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><h1>Target page : {}</h1></td>
+                            <td><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
+                            <td><h1>Move count : {}</h1></td>
+                            <td><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td>
+                            <td><h1>Username : {}</h1></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>            
             <div style="margin: 2%;">
             {}
             </div>
         </body>
-        '''.format(status.code.name, status.username, status.page, status.target_page, status.move_count, body).encode('utf-8')
+        '''.format(status.username, status.page, status.target_page, status.move_count, status.username,body).encode('utf-8')
         
         self.wfile.write(content)
 
