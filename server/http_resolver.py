@@ -8,8 +8,7 @@ from urllib.parse import urlparse
 from urllib.parse import quote_plus
 from urllib.parse import unquote_plus
 from functools import partial
-
-WIKI_FR_URL = 'https://fr.wikipedia.org'
+from wikipedia_api import request_page_body_and_links
 
 class Handler(http.server.BaseHTTPRequestHandler):
     def __init__(self, game_manager, links, resources, *args, **kwargs):
@@ -93,16 +92,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
             page = self._links[gid][uid][link_code]
 
             # Recover page and links from wikipedia API
-            r = requests.get('{}/w/api.php?action=parse&format=json&page={}&prop=text|links'.format(WIKI_FR_URL, page))
-            
+            body, links = request_page_body_and_links(page)
+
             # Successfuly retrieve page
-            if r.status_code == 200:
+            if body:
 
                 # Move player
                 status = self._game_manager.move_player_and_get_status(gid, uid, page)
 
                 # Render page
-                self._setup_page_and_links(r.json()['parse']['text']['*'], r.json()['parse']['links'], gid, uid, status)
+                self._setup_page_and_links(body, links, gid, uid, status)
             
             # Failed to retrieve pas
             else:
@@ -123,7 +122,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             start_page = self._game_manager.get_start_page_from_game(gid)
 
             # Initialize the default link to start page
-            self._links[gid][uid]['0'] = "France"
+            self._links[gid][uid]['0'] = start_page
 
             # Send response
             self.send_response(301)
@@ -132,7 +131,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
         # Other resources requested (probably wikipedia)
         else:
-            r = requests.get('{}/{}'.format(WIKI_FR_URL, url.path))
+            r = requests.get('{}/{}'.format('https://fr.wikipedia.org', url.path))
             self._setup_header(r.status_code, mimetype)
             if r.status_code == 200:
                 self.wfile.write(bytes(r.content))

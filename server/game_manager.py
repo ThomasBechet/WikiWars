@@ -1,4 +1,5 @@
 from player_status import PlayerStatus, PlayerStatusCode
+from wikipedia_api import generate_two_pages
 
 class GameManager():
     def __init__(self):
@@ -6,7 +7,8 @@ class GameManager():
 
     def add_game(self, gid, game):
         self._games[gid] = game
-        self._games[gid].start('France', 'Allemand')
+        start_page, target_page = generate_two_pages()
+        self._games[gid].start(start_page, target_page)
 
     def get_start_page_from_game(self, gid):
         return self._games[gid].start_page
