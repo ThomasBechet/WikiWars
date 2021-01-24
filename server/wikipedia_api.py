@@ -10,18 +10,15 @@ def request_page_body_and_links(page):
     else:
         return None, None
 
-import time
-
 def generate_two_pages():
-    return 'France', 'Allemand'
+    # Uncomment to have a simple test case
+    #return 'France', 'Allemand'
 
-    # r = requests.get("{}/w/api.php?action=query&list=random&rnnamespace=0&rnlimit=2&format=json".format(WIKI_URL))
-    # if r.status_code == 200:
-    #     j = r.json()
-    #     start_page  = j['query']['random'][0]['title']
-    #     target_page = j['query']['random'][1]['title']
-    #     print('r', start_page, target_page)
-    #     time.sleep(4)
-    #     return start_page, target_page
-    # else:
-    #     return None, None
+    r = requests.get("{}/w/api.php?action=query&list=random&rnnamespace=0&rnlimit=2&format=json".format(WIKI_URL))
+    if r.status_code == 200:
+        j = r.json()
+        start_page  = j['query']['random'][0]['title'].replace(' ', '_')
+        target_page = j['query']['random'][1]['title'].replace(' ', '_')
+        return start_page, target_page
+    else:
+        return None, None

@@ -9,6 +9,7 @@ from urllib.parse import quote_plus
 from urllib.parse import unquote_plus
 from functools import partial
 from wikipedia_api import request_page_body_and_links
+from player_status import PlayerStatusCode
 
 class Handler(http.server.BaseHTTPRequestHandler):
     def __init__(self, game_manager, links, resources, *args, **kwargs):
@@ -73,6 +74,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
         
         self.wfile.write(content)
 
+    def _setup_error_page(self, error_message):
+        self._setup_header(200, 'text/html; charset=utf-8')
+        content = '''
+        <head>
+            <title>WikiWars Error</title>
+        </head>
+        <body>
+            <h1>Error</h1>
+            <a>{}</a>
+        </body>
+        '''.format(error_message).encode('utf-8')
+        self.wfile.write(content)
+
     def log_message(self, format, *args):
         return
 
@@ -91,21 +105,33 @@ class Handler(http.server.BaseHTTPRequestHandler):
             link_code = url.path.split('/', 2)[2]
             page = self._links[gid][uid][link_code]
 
-            # Recover page and links from wikipedia API
-            body, links = request_page_body_and_links(page)
+            # Test page validity
+            if page:
 
-            # Successfuly retrieve page
-            if body:
+                # Recover page and links from wikipedia API
+                body, links = request_page_body_and_links(page)
 
-                # Move player
-                status = self._game_manager.move_player_and_get_status(gid, uid, page)
+                # Successfuly retrieve page
+                if body:
 
-                # Render page
-                self._setup_page_and_links(body, links, gid, uid, status)
-            
-            # Failed to retrieve pas
+                    # Move player
+                    status = self._game_manager.move_player_and_get_status(gid, uid, page)
+
+                    # Check status
+                    if status.code == PlayerStatusCode.UNAUTHORIZED:
+                        # Throw error
+                        self._setup_error_page('Unauthorized access')
+                    else:
+                        # Render page
+                        self._setup_page_and_links(body, links, gid, uid, status)
+                
+                # Failed to retrieve page
+                else:
+                    self._setup_error_page('Failed to retrieve page')
+
+            # Throw invalid page
             else:
-                pass
+                self._setup_error_page('Invalid page number, GID or UID : please check your url')
 
         # Local server resource requested
         elif url.path in self._resources.keys():
@@ -129,7 +155,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_header('Location', '/wiki/{}?gid={}&uid={}'.format(0, gid, uid)) # Redirect to first page
             self.end_headers()
 
-        # Other resources requested (probably wikipedia)
+        # Other resources requested (probably from wikipedia)
         else:
             r = requests.get('{}/{}'.format('https://fr.wikipedia.org', url.path))
             self._setup_header(r.status_code, mimetype)
