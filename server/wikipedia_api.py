@@ -10,10 +10,12 @@ def request_page_body_and_links(page):
     else:
         return None, None
 
-def generate_two_pages():
-    # Uncomment to have a simple test case
-    #return 'France', 'Allemand'
+def generate_two_pages(debug):
+    # Generate two well known pages (debug)
+    if debug:
+        return 'France', 'Espagne'
 
+    # Generate two pages using the wikipedia API
     r = requests.get("{}/w/api.php?action=query&list=random&rnnamespace=0&rnlimit=2&format=json".format(WIKI_URL))
     if r.status_code == 200:
         j = r.json()

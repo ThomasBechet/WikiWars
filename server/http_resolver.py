@@ -70,7 +70,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             {}
             </div>
         </body>
-        '''.format(status.username, status.page, status.target_page, status.move_count, status.username,body).encode('utf-8')
+        '''.format(status.username, status.page.replace('_', ' '), status.target_page.replace('_', ' '), status.move_count, status.username,body).encode('utf-8')
         
         self.wfile.write(content)
 
@@ -85,6 +85,30 @@ class Handler(http.server.BaseHTTPRequestHandler):
             <a>{}</a>
         </body>
         '''.format(error_message).encode('utf-8')
+        self.wfile.write(content)
+
+    def _setup_win_page(self):
+        self._setup_header(200, 'text/html; charset=utf-8')
+        content = '''
+        <head>
+            <title>WikiWars Win</title>
+        </head>
+        <body>
+            <h1 style="color: green">You win !</h1>
+        </body>
+        '''.encode('utf-8')
+        self.wfile.write(content)
+
+    def _setup_lose_page(self):
+        self._setup_header(200, 'text/html; charset=utf-8')
+        content = '''
+        <head>
+            <title>WikiWars Lose</title>
+        </head>
+        <body>
+            <h1 style="color: red">You lose !</h1>
+        </body>
+        '''.encode('utf-8')
         self.wfile.write(content)
 
     def log_message(self, format, *args):
@@ -121,6 +145,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     if status.code == PlayerStatusCode.UNAUTHORIZED:
                         # Throw error
                         self._setup_error_page('Unauthorized access')
+                    elif status.code == PlayerStatusCode.GAME_WON:
+                        # Display win page
+                        self._setup_win_page()
+                    elif status.code == PlayerStatusCode.GAME_LOST:
+                        # Display lose page
+                        self._setup_lose_page()
                     else:
                         # Render page
                         self._setup_page_and_links(body, links, gid, uid, status)

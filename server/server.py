@@ -3,6 +3,7 @@ from http_resolver import HttpResolver
 from game_factory import GameFactory
 from game_manager import GameManager
 import threading
+import sys
 
 class ConnectionResolverThread(threading.Thread):
     def __init__(self, connection_resolver):
@@ -16,8 +17,14 @@ class ConnectionResolverThread(threading.Thread):
         self._connection_resolver.stop()
 
 if __name__ == '__main__':
+    # Detect debug command
+    debug = False
+    if len(sys.argv) > 1:
+        if sys.argv[1] == '--debug':
+            debug = True
+
     game_factorty       = GameFactory()
-    game_manager        = GameManager()
+    game_manager        = GameManager(debug)
     connection_resolver = ConnectionResolver(game_factorty, game_manager)
     http_resolver       = HttpResolver(game_manager)
     

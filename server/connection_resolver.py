@@ -44,7 +44,7 @@ class ConnectionResolver:
         while self._continue:
             ready, _, _ = select.select([s], [], [], 1)
             if ready:
-                # Get socket
+                # Get new connection
                 conn, _ = s.accept()
 
                 # Recover information

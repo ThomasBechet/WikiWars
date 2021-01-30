@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     # Get user information
     username = input('Enter your username: ')
-    player_count = int(input('Player count: '))
+    player_count = int(input('Requested player number: '))
     
     # Ask for a party
     information = {}

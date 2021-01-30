@@ -2,6 +2,8 @@ import uuid
 
 from game import Game, Player
 
+# Class responsible for registering new players in lobbies
+# and generating the new game
 class GameFactory:
     def __init__(self):
         self._waiting_games = {}
